@@ -120,14 +120,15 @@ delay(3000);
 #endif 
 
   // Первично ставим время и координаты
-  while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid()))
+  //while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid()))
+  while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid()))
     while(GPS_SoftSerial.available())
       {
         ATGM332D.encode(GPS_SoftSerial.read());
-        //DEBUG(ATGM332D_year.value());
-        //DEBUG(ATGM332D.location.lat());
-        //DEBUG(ATGM332D.location.lat());
-        //DEBUG("****");
+        DEBUG(ATGM332D_year.value());
+        DEBUG(ATGM332D.location.lat());
+        DEBUG(ATGM332D.location.lat());
+        DEBUG("****");
       }
   adjustTime(getGMTOffset());
   // Тут будут координаты. Их мы будем далее использовать для расчёта восхода/заката.
@@ -142,9 +143,17 @@ delay(3000);
   DEBUG("Begin sunset/sunrise");
   sunsetSunrise sun;
   SunPosition sunHelper;
-  sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
-  sun.rise = sunHelper.sunrise();
-  sun.set = sunHelper.sunset();
+  if((lat == 0) && (lon ==0))
+  {
+    sun.rise = 0;
+    sun.set = 0;
+  }
+  else
+  {
+    sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+    sun.rise = sunHelper.sunrise();
+    sun.set = sunHelper.sunset();
+  }
   DEBUG(sun.rise);
   DEBUG(sun.set);
   DEBUG("End sunset/sunrise");
@@ -249,9 +258,17 @@ delay(3000);
           bigLEDScreen.setBrightness(calculateBrightness(&sun));
           if((hour == 0) && minute == 5)
           {
-            sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
-            sun.rise = sunHelper.sunrise();
-            sun.set = sunHelper.sunset();
+            if((lat == 0) && (lon == 0))
+            {
+              sun.rise = 0;
+              sun.set = 0;
+            }
+            else
+            {
+              sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+              sun.rise = sunHelper.sunrise();
+              sun.set = sunHelper.sunset();
+            }
           }
       }
     }
@@ -282,8 +299,15 @@ byte calculateBrightness(sunsetSunrise* sun)
   uint32_t    timeSet  = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + sun->set * 60; 
   uint32_t    timeRise = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + sun->rise * 60; 
 
-  if((timeNow.TotalSeconds() > timeRise) && (timeNow.TotalSeconds() < timeSet)) // День, поскольку мы между закатом и рассветом
-    return getDayBrightness();
+  if((sun->rise == 0) && (sun->set == 0)) 
+  {
+    return getNightBrightness(); // Если время восхода/заката непонятно, то яркость ночная, чтобы случайно не сжечь глаза.
+  }
   else
-    return getNightBrightness();
+  {
+    if((timeNow.TotalSeconds() > timeRise) && (timeNow.TotalSeconds() < timeSet)) // День, поскольку мы между закатом и рассветом
+      return getDayBrightness();
+    else
+      return getNightBrightness();
+  }
 }
