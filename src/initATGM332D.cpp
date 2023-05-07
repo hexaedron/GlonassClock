@@ -1,8 +1,13 @@
 #include <Arduino.h>
 #include "settings.h"
-#include <SoftwareSerial.h>
 
-extern SoftwareSerial GPS_SoftSerial;
+#ifdef USE_SOFT_SERIAL
+    #include <SoftwareSerial.h>
+    extern SoftwareSerial GPS_SoftSerial;
+#else
+    #include <NeoSWSerial.h>
+    extern NeoSWSerial GPS_SoftSerial;
+#endif
 
 // $PCAS00*01\r\n в конце строки вызывает запись в EEPROM чипа. Поскольку мы делаем инит при каждом запуске, это не имеет
 // смысла и только изнашивает EEPROM.

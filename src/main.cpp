@@ -13,8 +13,13 @@
 #define SP_PRECISE
 #include "SunPosition.h"
 #include <TinyGPS++.h>
-#include <SoftwareSerial.h>
-//#include <NeoSWSerial.h>
+
+#ifdef USE_SOFT_SERIAL
+  #include <SoftwareSerial.h>
+#else
+  #include <NeoSWSerial.h>
+#endif
+
 #include <microWire.h>   // или просто Wire
 //#include <Wire.h>
 #include <RtcDS1307.h>
@@ -26,7 +31,11 @@ sevenSegmentScreenShifted bigLEDScreen(LATCH, DATA, CLOCK, PWM, 4, COMMON_ANODE)
 EncButton<EB_TICK, ENCODER_S1, ENCODER_S2, ENCODER_KEY> encoder;
 
 // Всё, связанное с GPS, тоже нужно глобально
-SoftwareSerial GPS_SoftSerial(TX_PIN, RX_PIN);
+#ifdef USE_SOFT_SERIAL
+  SoftwareSerial GPS_SoftSerial(RX_PIN, TX_PIN);
+#else 
+  NeoSWSerial GPS_SoftSerial(RX_PIN, TX_PIN);
+#endif
 TinyGPSPlus ATGM332D;
 TinyGPSCustom ATGM332D_year(ATGM332D, "GNZDA", 4);
 TinyGPSCustom ATGM332D_month(ATGM332D, "GNZDA", 3);
@@ -34,6 +43,22 @@ TinyGPSCustom ATGM332D_day(ATGM332D, "GNZDA", 2);
 
 // Правильно заполняет массив с датой/временем
 void makeDateTimeScreen(char* datetime, uint8_t hr, uint8_t min, bool dot);
+
+void initPins(void)
+{
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  
+  pinMode(CLOCK,      OUTPUT);
+  pinMode(DATA,       OUTPUT);
+  pinMode(LATCH,      OUTPUT); 
+  pinMode(PWM,        OUTPUT); 
+  pinMode(TX_PIN,     OUTPUT);
+  pinMode(RX_PIN,      INPUT);
+  pinMode(ENCODER_KEY, INPUT);
+  pinMode(ENCODER_S1,  INPUT);
+  pinMode(ENCODER_S2,  INPUT);
+}
 
 // Берёт с GPS время, плюсует к нему смещение часового пояса и обновляет RTC часики
 void adjustTime(uint32_t GMTSecondsOffset);
@@ -57,15 +82,7 @@ int main(int argc, char **argv)
 
   EEPROMValuesInit();
 
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
-  
-  pinMode(CLOCK,  OUTPUT);
-  pinMode(DATA,   OUTPUT);
-  pinMode(LATCH,  OUTPUT); 
-  pinMode(PWM,    OUTPUT); 
-  pinMode(TX_PIN,  INPUT);
-  pinMode(RX_PIN, OUTPUT);
+  initPins();
 
   // Задали вид экрана, сразу ставим ночную, чтобы если отключится элекричество
   // среди ночи, пользователю не выжгло бы глаза
@@ -110,30 +127,31 @@ int main(int argc, char **argv)
   }
 
 DEBUG("Begin GPS");
-GPS_SoftSerial.begin(9600);
+GPS_SoftSerial.begin(SOFT_GPS_BAUD_RATE);
 delay(3000);
 
 #ifdef NEED_GPS_SETUP
   DEBUG("Begin GPS setup");
   initATGM332D();
-  DEBUG("END GPS setup");
+  DEBUG("End GPS setup");
 #endif 
 
-  // Первично ставим время и координаты
+  DEBUG("Begin GPS Fix");
   //while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid()))
-  while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid()))
-    while(GPS_SoftSerial.available())
-      {
+  while(!(ATGM332D.time.isValid() && ATGM332D.location.isValid()))
+  {
+    while(GPS_SoftSerial.available() > 0)
+    {
         ATGM332D.encode(GPS_SoftSerial.read());
-        DEBUG(ATGM332D_year.value());
-        DEBUG(ATGM332D.location.lat());
-        DEBUG(ATGM332D.location.lat());
-        DEBUG("****");
-      }
+        //Serial.write(GPS_SoftSerial.read());
+    }
+  }
+  
+
   adjustTime(getGMTOffset());
   // Тут будут координаты. Их мы будем далее использовать для расчёта восхода/заката.
   float lat = ATGM332D.location.lat();
-  float lon = ATGM332D.location.lat();;
+  float lon = ATGM332D.location.lng();;
 
   DEBUG(lat);
   DEBUG(lon);
@@ -201,7 +219,7 @@ delay(3000);
     }
     
     // Время с датчика надо брать постоянно, чтобы не переполнился буфер
-    while(GPS_SoftSerial.available())
+    while(GPS_SoftSerial.available() > 0)
       ATGM332D.encode(GPS_SoftSerial.read());
     
     // Сохраняем значения, чтобы не дёргать лишний раз SPI
