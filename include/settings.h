@@ -1,14 +1,14 @@
 #pragma once
 
-#define CLOCK       7  //SH_CP green
-#define DATA        10   //DS   yellow
-#define LATCH       9   //ST_CP blue
-#define PWM         6   // orange
-#define ENCODER_S1  A0  // green
-#define ENCODER_S2  A1  //white
-#define ENCODER_KEY A2  // blue
-#define TX_PIN      12   // GPS
-#define RX_PIN      11   // GPS
+#define CLOCK      10   //SH_CP 
+#define DATA        8   //DS   
+#define LATCH       9   //ST_CP 
+#define PWM         6   // 
+#define ENCODER_S1  A0  // 
+#define ENCODER_S2  A1  //
+#define ENCODER_KEY A2  // 
+#define TX_PIN       5  // GPS
+#define RX_PIN       4  // GPS
 
 #define GMT_SECONDS_OFFSET (3 * 60 * 60) // Московское время +3 часа
 #define DEFAULT_BRIGHTNESS_EEPROM_ADDRESS 0 
@@ -24,8 +24,8 @@
 #define FAST_SHIFT_OUT
 //#define NEED_GPS_SETUP
 #define NUMBERS_ONLY // Для экрана
-#define USE_SOFT_SERIAL
-#define SOFT_GPS_BAUD_RATE 4800
+//#define USE_SOFT_SERIAL
+#define SOFT_GPS_BAUD_RATE 9600
 
 #ifdef DEBUG_ENABLE
   #define DEBUG(x) Serial.println(x)
