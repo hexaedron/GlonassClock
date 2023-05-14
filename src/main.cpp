@@ -146,7 +146,6 @@ delay(3000);
         //Serial.write(GPS_SoftSerial.read());
     }
   }
-  
 
   adjustTime(getGMTOffset());
   // Тут будут координаты. Их мы будем далее использовать для расчёта восхода/заката.
