@@ -137,8 +137,7 @@ delay(3000);
 #endif 
 
   DEBUG("Begin GPS Fix");
-  //while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid()))
-  while(!(ATGM332D.time.isValid() && ATGM332D.location.isValid()))
+  while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid()))
   {
     while(GPS_SoftSerial.available() > 0)
     {
@@ -146,15 +145,20 @@ delay(3000);
         //Serial.write(GPS_SoftSerial.read());
     }
   }
-
+  DEBUG(ATGM332D.time.hour());
+  DEBUG(ATGM332D.time.minute());
+  DEBUG("***");
   adjustTime(getGMTOffset());
+  DEBUG(rtc.GetDateTime().Hour());
+  DEBUG(rtc.GetDateTime().Minute());
+  DEBUG("***");
   // Тут будут координаты. Их мы будем далее использовать для расчёта восхода/заката.
   float lat = ATGM332D.location.lat();
   float lon = ATGM332D.location.lng();;
 
   DEBUG(lat);
   DEBUG(lon);
-  DEBUG("End GPS");
+  DEBUG("End GPS"); 
 
   // Тут мы сразу посчитаем время захода и восхода
   DEBUG("Begin sunset/sunrise");
