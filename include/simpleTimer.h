@@ -1,46 +1,129 @@
 #include <Arduino.h>
 
-class Timer32 {
+class Timer32 
+{
   public:
-    void Timer(uint32_t nprd = 0) {
-     setPeriod(nprd);
+
+    Timer32 () {}
+
+    Timer32 (uint32_t nprd) 
+    {
+      start(nprd);
     }
-    void setPeriod(uint32_t nprd) {
+
+    void start(uint32_t nprd) 
+    {
       prd = nprd;
+      start();
     }
-    bool ready() {
-      return (prd && millis() - tmr >= prd) ? (tmr = millis(), 1) : 0;
+
+    void start() 
+    {
+      tmr = millis();
+      if (!tmr) tmr = 1;
     }
+
+    void stop() 
+    {
+      tmr = 0;
+    }
+
+    bool ready() 
+    {
+      if (tmr && millis() - tmr >= prd) 
+      {
+        start();
+        return 1;
+      }
+      return 0;
+    }
+
   private:
     uint32_t tmr = 0, prd = 0;
 };
 
-class Timer16 {
+class Timer16 
+{
   public:
-    void Timer(uint16_t nprd = 0) {
-      setPeriod(nprd);
+
+    Timer16 () {}
+
+    Timer16 (uint16_t nprd) 
+    {
+      start(nprd);
     }
-    void setPeriod(uint16_t nprd) {
+
+    void start(uint16_t nprd) 
+    {
       prd = nprd;
+      start();
     }
-    bool ready() {
-      return (prd && millis() - tmr >= prd) ? (tmr = millis(), 1) : 0;
+
+    void start() 
+    {
+      tmr = millis();
+      if (!tmr) tmr = 1;
     }
+
+    void stop() 
+    {
+      tmr = 0;
+    }
+
+    bool ready() 
+    {
+      if (tmr && millis() - tmr >= prd) 
+      {
+        start();
+        return 1;
+      }
+      return 0;
+    }
+
   private:
-    uint16_t tmr = 0, prd = 0;
+    uint32_t tmr = 0;
+    uint16_t prd = 0;
 };
 
-class Timer8 {
+class Timer8 
+{
   public:
-    void Timer(uint8_t nprd = 0) {
-      setPeriod(nprd);
+
+    Timer8 () {}
+
+    Timer8 (uint8_t nprd) 
+    {
+      start(nprd);
     }
-    void setPeriod(uint8_t nprd) {
+
+    void start(uint8_t nprd) 
+    {
       prd = nprd;
+      start();
     }
-    bool ready() {
-      return (prd && millis() - tmr >= prd) ? (tmr = millis(), 1) : 0;
+
+    void start() 
+    {
+      tmr = millis();
+      if (!tmr) tmr = 1;
     }
+
+    void stop() 
+    {
+      tmr = 0;
+    }
+
+    bool ready() 
+    {
+      if (tmr && millis() - tmr >= prd) 
+      {
+        start();
+        return 1;
+      }
+      return 0;
+    }
+    
   private:
-    uint8_t tmr = 0, prd = 0;
+    uint32_t tmr = 0; 
+    uint8_t  prd = 0;
 };

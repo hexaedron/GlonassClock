@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "settings.h"
+#include "simpleTimer.h"
 
 // Эксперимент
 #ifdef FAST_SHIFT_OUT
@@ -101,9 +102,9 @@ int main(int argc, char **argv)
   DEBUG(rtc.LastError());
   
   rtc.LastError();
-  if (!rtc.GetIsRunning())
-    rtc.SetIsRunning(true);
+  rtc.SetIsRunning(true);
 
+  DEBUG(rtc.GetIsRunning());
   DEBUG("Start RTC ok");
 
   DEBUG(rtc.GetDateTime().Hour());
@@ -118,12 +119,17 @@ int main(int argc, char **argv)
   // Если время валидно, покажем его
   if(rtc.IsDateTimeValid())
   {
+    DEBUG("RTC is valid");
     makeDateTimeScreen(datetime, rtc.GetDateTime().Hour(), rtc.GetDateTime().Minute(), true);
     // И сразу показали снова, а то вдруг оно поменялось
     prevBrightness = bigLEDScreen.getBrightness();
     bigLEDScreen.setBrightness(0);
     bigLEDScreen.setText(datetime); 
     bigLEDScreen.setBrightness(prevBrightness); 
+  }
+  else
+  {
+    DEBUG("RTC is invalid");
   }
 
 DEBUG("Begin GPS");
@@ -137,24 +143,31 @@ delay(3000);
 #endif 
 
   DEBUG("Begin GPS Fix");
-  while(!(ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid()))
+  while(GPS_SoftSerial.available() > 0)
   {
-    while(GPS_SoftSerial.available() > 0)
-    {
-        ATGM332D.encode(GPS_SoftSerial.read());
-        //Serial.write(GPS_SoftSerial.read());
-    }
+      ATGM332D.encode(GPS_SoftSerial.read());
   }
+  
   DEBUG(ATGM332D.time.hour());
   DEBUG(ATGM332D.time.minute());
   DEBUG("***");
-  adjustTime(getGMTOffset());
+
+  if(GPS_IS_VALID())
+    adjustTime(getGMTOffset());
+
   DEBUG(rtc.GetDateTime().Hour());
   DEBUG(rtc.GetDateTime().Minute());
   DEBUG("***");
+
+  float lat = 0.0;
+  float lon = 0.0;
+  
   // Тут будут координаты. Их мы будем далее использовать для расчёта восхода/заката.
-  float lat = ATGM332D.location.lat();
-  float lon = ATGM332D.location.lng();;
+  if(GPS_IS_VALID())
+  {
+    lat = ATGM332D.location.lat();
+    lon = ATGM332D.location.lng();
+  }
 
   DEBUG(lat);
   DEBUG(lon);
@@ -164,7 +177,7 @@ delay(3000);
   DEBUG("Begin sunset/sunrise");
   sunsetSunrise sun;
   SunPosition sunHelper;
-  if((lat == 0) && (lon ==0))
+  if((lat == 0) && (lon == 0))
   {
     sun.rise = 0;
     sun.set = 0;
@@ -192,6 +205,13 @@ delay(3000);
 
   bool dotRefreshFlag = true; // Флаги тут для того, чтобы не делать действия несколько раз за секунду!
   bool minRefreshFlag = true;
+  Timer16 clockTimer(500); // Для опроса часов по I2C не чаще раза в полсекунды.
+
+  uint8_t hour = rtc.GetDateTime().Hour();
+  uint8_t minute = rtc.GetDateTime().Minute();
+  uint8_t second = rtc.GetDateTime().Second();
+
+  DEBUG("Start main cycle!");
   for(;;) 
   {
     // Опрос энкодера
@@ -207,6 +227,7 @@ delay(3000);
       bigLEDScreen.setBrightness(0);
       bigLEDScreen.setText(datetime); 
       bigLEDScreen.setBrightness(prevBrightness);
+      encoder.resetState();
     }
 
     // Сброс к заводским настройкам!
@@ -225,10 +246,14 @@ delay(3000);
     while(GPS_SoftSerial.available() > 0)
       ATGM332D.encode(GPS_SoftSerial.read());
     
-    // Сохраняем значения, чтобы не дёргать лишний раз SPI
-    uint8_t hour = rtc.GetDateTime().Hour();
-    uint8_t minute = rtc.GetDateTime().Minute();
-    uint8_t second = rtc.GetDateTime().Second();
+    // Сохраняем значения, чтобы не дёргать лишний раз I2C
+    if(clockTimer.ready())
+    {
+      hour   = rtc.GetDateTime().Hour();
+      minute = rtc.GetDateTime().Minute();
+      second = rtc.GetDateTime().Second();
+      DEBUG(second);
+    }
 
     // Рисуем время только тогда, когда сменится минута (т.е. будет ровно 0 секунд)
     // Флаг тут для того, чтобы не делать это несколько раз за секунду!
@@ -243,6 +268,9 @@ delay(3000);
       interrupts(); 
       bigLEDScreen.setBrightness(prevBrightness);
       dotRefreshFlag = !dotRefreshFlag;
+      DEBUG(minute);
+      DEBUG(second);
+      DEBUG("****");
     }
     else if(!(second % 2) && !dotRefreshFlag)
     {

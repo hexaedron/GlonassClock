@@ -27,6 +27,8 @@
 //#define USE_SOFT_SERIAL
 #define SOFT_GPS_BAUD_RATE 9600
 
+#define GPS_IS_VALID() (ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid())
+
 #ifdef DEBUG_ENABLE
   #define DEBUG(x) Serial.println(x)
 #else
