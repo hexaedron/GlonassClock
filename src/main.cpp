@@ -37,10 +37,10 @@ EncButton<EB_TICK, ENCODER_S1, ENCODER_S2, ENCODER_KEY> encoder;
 #else 
   NeoSWSerial GPS_SoftSerial(RX_PIN, TX_PIN);
 #endif
-TinyGPSPlus ATGM332D;
-TinyGPSCustom ATGM332D_year(ATGM332D, "GNZDA", 4);
+TinyGPSPlus   ATGM332D;
+TinyGPSCustom ATGM332D_year(ATGM332D,  "GNZDA", 4);
 TinyGPSCustom ATGM332D_month(ATGM332D, "GNZDA", 3);
-TinyGPSCustom ATGM332D_day(ATGM332D, "GNZDA", 2);
+TinyGPSCustom ATGM332D_day(ATGM332D,   "GNZDA", 2);
 
 // Правильно заполняет массив с датой/временем
 void makeDateTimeScreen(char* datetime, uint8_t hr, uint8_t min, bool dot);
@@ -152,7 +152,7 @@ delay(3000);
   DEBUG(ATGM332D.time.minute());
   DEBUG("***");
 
-  if(GPS_IS_VALID())
+  if(GPS_IS_VALID() && atoi(ATGM332D_year.value()) >= 2023)
     adjustTime(getGMTOffset());
 
   DEBUG(rtc.GetDateTime().Hour());
@@ -258,7 +258,7 @@ delay(3000);
     // Рисуем время только тогда, когда сменится минута (т.е. будет ровно 0 секунд)
     // Флаг тут для того, чтобы не делать это несколько раз за секунду!
     // Тут доп условие. Мигаем точкой только если за последние 10 сек было обновление по GPS
-    if(((second % 2) && dotRefreshFlag) && (ATGM332D.time.age() <= 10000))  
+    if(((second % 2) && dotRefreshFlag) && GPS_IS_VALID())  
     {
       makeDateTimeScreen(datetime, hour, minute, false);
       prevBrightness = bigLEDScreen.getBrightness();
