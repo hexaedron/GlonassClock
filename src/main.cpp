@@ -155,6 +155,7 @@ delay(3000);
   if(GPS_IS_VALID() && atoi(ATGM332D_year.value()) >= 2023)
     adjustTime(getGMTOffset());
 
+  DEBUG(ATGM332D_year.value());
   DEBUG(rtc.GetDateTime().Hour());
   DEBUG(rtc.GetDateTime().Minute());
   DEBUG("***");
@@ -252,27 +253,27 @@ delay(3000);
       hour   = rtc.GetDateTime().Hour();
       minute = rtc.GetDateTime().Minute();
       second = rtc.GetDateTime().Second();
-      DEBUG(second);
+      //DEBUG(second);
     }
 
     // Рисуем время только тогда, когда сменится минута (т.е. будет ровно 0 секунд)
     // Флаг тут для того, чтобы не делать это несколько раз за секунду!
     // Тут доп условие. Мигаем точкой только если за последние 10 сек было обновление по GPS
-    if(((second % 2) && dotRefreshFlag) && GPS_IS_VALID())  
+    if(((second % 2) && dotRefreshFlag))  
     {
-      makeDateTimeScreen(datetime, hour, minute, false);
-      prevBrightness = bigLEDScreen.getBrightness();
-      bigLEDScreen.setBrightness(0); 
-      noInterrupts();  // Иначе неприятно мерцает при перерисовке
-        bigLEDScreen.setText(datetime); 
-      interrupts(); 
-      bigLEDScreen.setBrightness(prevBrightness);
+      if(GPS_TIME_IS_VALID())
+      {
+        makeDateTimeScreen(datetime, hour, minute, false);
+        prevBrightness = bigLEDScreen.getBrightness();
+        bigLEDScreen.setBrightness(0); 
+        noInterrupts();  // Иначе неприятно мерцает при перерисовке
+          bigLEDScreen.setText(datetime); 
+        interrupts(); 
+        bigLEDScreen.setBrightness(prevBrightness);
+      }
       dotRefreshFlag = !dotRefreshFlag;
-      DEBUG(minute);
-      DEBUG(second);
-      DEBUG("****");
     }
-    else if(!(second % 2) && !dotRefreshFlag)
+    else if((!(second % 2)) && !dotRefreshFlag)
     {
       makeDateTimeScreen(datetime, hour, minute, true);
       prevBrightness = bigLEDScreen.getBrightness();
@@ -286,7 +287,7 @@ delay(3000);
       
     // Каждые 5 мин фиксим время и локацию, на всякий
     // Сюда же воткнём установку яркости, супер часто это делать смысла немного
-    // И пересчёт восхода/заката сюда же, в 00:05
+    // И пересчёт восхода/заката сюда же, раз в час, ЧЧ:05
     if(minute % 5 ) 
     {
       if(minRefreshFlag)
@@ -305,7 +306,7 @@ delay(3000);
           minRefreshFlag = false;
           // И яркость проставим как надо
           bigLEDScreen.setBrightness(calculateBrightness(&sun));
-          if((hour == 0) && minute == 5)
+          if(minute == 5)
           {
             if((lat == 0) && (lon == 0))
             {

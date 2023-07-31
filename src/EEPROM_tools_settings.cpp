@@ -24,7 +24,12 @@ void setNightBrightness(byte nightBrightness)
 
 uint32_t getGMTOffset(void)
 {
-  return(EEPROM.read(GMT_OFFSET_HOURS_EEPROM_ADDRESS) * 60 * 60 + EEPROM.read(GMT_OFFSET_MINUTES_EEPROM_ADDRESS) * 60);
+  uint8_t seconds = EEPROM.read(GMT_OFFSET_MINUTES_EEPROM_ADDRESS) * 60;
+  if (!(seconds % 15))
+  {
+    seconds = seconds % 15;
+  }
+  return(EEPROM.read(GMT_OFFSET_HOURS_EEPROM_ADDRESS) * 60 * 60 + seconds);
 }
 
 void setGMTOffset(uint32_t offset)
