@@ -22,7 +22,6 @@
 #endif
 
 #include <microWire.h>   // или просто Wire
-//#include <Wire.h>
 #include <RtcDS1307.h>
 #include <EncButton.h>
 
@@ -310,8 +309,8 @@ delay(3000);
           {
             if((lat == 0) && (lon == 0))
             {
-              sun.rise = 0;
-              sun.set = 0;
+              sun.rise = DEFAULT_SUNRISE_TIME;
+              sun.set  =  DEFAULT_SUNSET_TIME;
             }
             else
             {

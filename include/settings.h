@@ -20,6 +20,10 @@
 #define INIT_ADDR 1023  // номер резервной ячейки
 #define INIT_KEY 66     // ключ первого запуска. 0-254, на выбор
 
+// Это на случай, если координаты не подгрузились
+#define DEFAULT_SUNRISE_TIME (9 * 60)
+#define DEFAULT_SUNSET_TIME (20 * 60)
+
 //#define DEBUG_ENABLE // Потом убрать
 #define FAST_SHIFT_OUT
 //#define NEED_GPS_SETUP
