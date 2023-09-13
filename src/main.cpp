@@ -304,21 +304,20 @@ delay(3000);
 
           minRefreshFlag = false;
           // И яркость проставим как надо
-          bigLEDScreen.setBrightness(calculateBrightness(&sun));
-          if(minute == 5)
+
+          if((lat == 0) && (lon == 0))
           {
-            if((lat == 0) && (lon == 0))
-            {
-              sun.rise = DEFAULT_SUNRISE_TIME;
-              sun.set  =  DEFAULT_SUNSET_TIME;
-            }
-            else
-            {
-              sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
-              sun.rise = sunHelper.sunrise();
-              sun.set = sunHelper.sunset();
-            }
+            DEBUG("Set default sunset/sunrise");
+            sun.rise = DEFAULT_SUNRISE_TIME;
+            sun.set  =  DEFAULT_SUNSET_TIME;
           }
+          else
+          {
+            sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+            sun.rise = sunHelper.sunrise();
+            sun.set = sunHelper.sunset();
+          }
+          bigLEDScreen.setBrightness(calculateBrightness(&sun));
       }
     }
     else
@@ -344,19 +343,34 @@ void adjustTime(uint32_t GMTSecondsOffset)
 
 byte calculateBrightness(sunsetSunrise* sun)
 {
+  DEBUG("Enter calculateBrightness()");
   RtcDateTime timeNow  = rtc.GetDateTime();
-  uint32_t    timeSet  = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + sun->set * 60; 
-  uint32_t    timeRise = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + sun->rise * 60; 
+  uint32_t    timeSet  = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + ((uint32_t)sun->set * 60); 
+  uint32_t    timeRise = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + ((uint32_t)sun->rise * 60); 
+
+  DEBUG(sun->rise);
+  DEBUG(sun->set);
 
   if((sun->rise == 0) && (sun->set == 0)) 
   {
+    DEBUG("RISE=SET=0");
     return getNightBrightness(); // Если время восхода/заката непонятно, то яркость ночная, чтобы случайно не сжечь глаза.
   }
   else
   {
+    DEBUG("RISE/SET:");
+    DEBUG(timeRise);
+    DEBUG(timeSet);
+    DEBUG(timeNow.TotalSeconds());
     if((timeNow.TotalSeconds() > timeRise) && (timeNow.TotalSeconds() < timeSet)) // День, поскольку мы между закатом и рассветом
-      return getDayBrightness();
+      {
+        DEBUG("It's a day!");
+        return getDayBrightness();
+      }
     else
-      return getNightBrightness();
+      {
+        DEBUG("It's a night!");
+        return getNightBrightness();
+      }
   }
 }
