@@ -184,7 +184,7 @@ delay(3000);
   }
   else
   {
-    sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+    sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds());
     sun.rise = sunHelper.sunrise();
     sun.set = sunHelper.sunset();
   }
@@ -303,8 +303,8 @@ delay(3000);
           }
 
           minRefreshFlag = false;
-          // И яркость проставим как надо
 
+          // И яркость проставим как надо
           if((lat == 0) && (lon == 0))
           {
             DEBUG("Set default sunset/sunrise");
@@ -313,7 +313,7 @@ delay(3000);
           }
           else
           {
-            sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+            sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds());
             sun.rise = sunHelper.sunrise();
             sun.set = sunHelper.sunset();
           }
