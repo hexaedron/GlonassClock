@@ -10,7 +10,7 @@
 #define TX_PIN       5  // GPS
 #define RX_PIN       4  // GPS
 
-#define GMT_SECONDS_OFFSET (3 * 60 * 60) // Московское время +3 часа
+#define GMT_SECONDS_OFFSET (3 * 60 * 60) // Московское время +3 часа по умолчанию
 #define DEFAULT_BRIGHTNESS_EEPROM_ADDRESS 0 
 #define NIGHT_BRIGHTNESS_EEPROM_ADDRESS 1
 #define GMT_OFFSET_HOURS_EEPROM_ADDRESS 2
@@ -24,7 +24,7 @@
 #define DEFAULT_SUNRISE_TIME (9 * 60)
 #define DEFAULT_SUNSET_TIME (20 * 60)
 
-//#define DEBUG_ENABLE // Потом убрать
+//#define DEBUG_ENABLE // Для включения отладки раскомментировать
 #define FAST_SHIFT_OUT
 //#define NEED_GPS_SETUP
 #define NUMBERS_ONLY // Для экрана

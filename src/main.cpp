@@ -184,7 +184,7 @@ delay(3000);
   }
   else
   {
-    sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds());
+    sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
     sun.rise = sunHelper.sunrise();
     sun.set = sunHelper.sunset();
   }
@@ -313,7 +313,7 @@ delay(3000);
           }
           else
           {
-            sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds());
+            sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
             sun.rise = sunHelper.sunrise();
             sun.set = sunHelper.sunset();
           }
