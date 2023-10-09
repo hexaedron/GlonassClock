@@ -46,13 +46,16 @@ void makeDateTimeScreen(char* datetime, uint8_t hr, uint8_t min, bool dot);
 
 void initPins(void)
 {
+  // сразу отключим вывод на экран, чтобы не появлялись рандомные символы.
+  pinMode(PWM,        OUTPUT); 
+  digitalWrite(PWM,      LOW);
+  
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
   
   pinMode(CLOCK,      OUTPUT);
   pinMode(DATA,       OUTPUT);
   pinMode(LATCH,      OUTPUT); 
-  pinMode(PWM,        OUTPUT); 
   pinMode(TX_PIN,     OUTPUT);
   pinMode(RX_PIN,      INPUT);
   pinMode(ENCODER_KEY, INPUT);
@@ -76,13 +79,13 @@ int main(int argc, char **argv)
 {
   init();
 
+  initPins();
+
   #ifdef DEBUG_ENABLE
     Serial.begin(9600);
   #endif
 
   EEPROMValuesInit();
-
-  initPins();
 
   // Задали вид экрана, сразу ставим ночную, чтобы если отключится элекричество
   // среди ночи, пользователю не выжгло бы глаза
