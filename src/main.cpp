@@ -48,7 +48,7 @@ void initPins(void)
 {
   // сразу отключим вывод на экран, чтобы не появлялись рандомные символы.
   pinMode(PWM,        OUTPUT); 
-  digitalWrite(PWM,      LOW);
+  digitalWrite(PWM,     HIGH);
   
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
