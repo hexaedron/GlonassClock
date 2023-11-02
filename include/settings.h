@@ -19,6 +19,7 @@
 #define NIGHT_BRIGHTNESS 40
 #define INIT_ADDR 1023  // номер резервной ячейки
 #define INIT_KEY 66     // ключ первого запуска. 0-254, на выбор
+#define SOFT_RTC_DELTA_T 1210 // Компенсация отставаний софт часов
 
 // Это на случай, если координаты не подгрузились
 #define DEFAULT_SUNRISE_TIME (9 * 60)
@@ -30,6 +31,7 @@
 #define NUMBERS_ONLY // Для экрана
 //#define USE_SOFT_SERIAL
 #define SOFT_GPS_BAUD_RATE 9600
+#define USE_SOFT_RTC
 
 #define GPS_IS_VALID() (ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid() && ATGM332D.location.isValid())
 #define GPS_TIME_IS_VALID() (ATGM332D.time.isValid() && ATGM332D_day.isValid() && ATGM332D_month.isValid() && ATGM332D_year.isValid())

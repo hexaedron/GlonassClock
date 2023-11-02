@@ -1,19 +1,13 @@
 #include <Arduino.h>
 #include "settings.h"
 #include "simpleTimer.h"
-
-// Эксперимент
-#ifdef FAST_SHIFT_OUT
-  #include <FastShiftOut.h>
-  #define shiftOut(DATA_PIN, CLOCK, ORDER, VALUE) FSO.write(VALUE)
-  FastShiftOut FSO(DATA, CLOCK, LSBFIRST);
-#endif
-
 #include "lib7SegmentScreenShifted.h"
+#include <TinyGPS++.h>
+#include <EncButton.h>
+#include <RtcDS1307.h>
 
 #define SP_PRECISE
 #include "SunPosition.h"
-#include <TinyGPS++.h>
 
 #ifdef USE_SOFT_SERIAL
   #include <SoftwareSerial.h>
@@ -21,12 +15,23 @@
   #include <NeoSWSerial.h>
 #endif
 
-#include <microWire.h>   // или просто Wire
-#include <RtcDS1307.h>
-#include <EncButton.h>
 
-// Часики и экран и энкодер нужны глобально
-RtcDS1307<TwoWire> rtc(Wire);
+// Часики нужны глобально
+#ifndef USE_SOFT_RTC
+  #include <microWire.h>   // или просто Wire
+  RtcDS1307<TwoWire> rtc(Wire); 
+#else
+  #include "swRTC2000.h"
+  swRTC2000 rtc;
+#endif
+
+#ifdef FAST_SHIFT_OUT
+  #include <FastShiftOut.h>
+  #define shiftOut(DATA_PIN, CLOCK, ORDER, VALUE) FSO.write(VALUE)
+  FastShiftOut FSO(DATA, CLOCK, LSBFIRST);
+#endif
+
+// Экран и энкодер нужны глобально
 sevenSegmentScreenShifted bigLEDScreen(LATCH, DATA, CLOCK, PWM, 4, COMMON_ANODE);
 EncButton<EB_TICK, ENCODER_S1, ENCODER_S2, ENCODER_KEY> encoder;
 
@@ -95,44 +100,48 @@ int main(int argc, char **argv)
 
   // Время удержания энкодера в миллисеундах для сброса к заводским настройкам
   encoder.setHoldTimeout(2000);
-  
-  DEBUG("Begin RTC");
-
-  // Запускаем часики
-  rtc.Begin();
-  DEBUG("Begin i2c ok");
-  DEBUG(rtc.LastError());
-  
-  rtc.LastError();
-  rtc.SetIsRunning(true);
-
-  DEBUG(rtc.GetIsRunning());
-  DEBUG("Start RTC ok");
-
-  DEBUG(rtc.GetDateTime().Hour());
-  DEBUG(rtc.GetDateTime().Minute());
-  DEBUG("End RTC");    
 
   char datetime[6] = "00.00";
   byte prevBrightness;
 
   bigLEDScreen.setText(datetime);
-  
-  // Если время валидно, покажем его
-  if(rtc.IsDateTimeValid())
-  {
-    DEBUG("RTC is valid");
-    makeDateTimeScreen(datetime, rtc.GetDateTime().Hour(), rtc.GetDateTime().Minute(), true);
-    // И сразу показали снова, а то вдруг оно поменялось
-    prevBrightness = bigLEDScreen.getBrightness();
-    bigLEDScreen.setBrightness(0);
-    bigLEDScreen.setText(datetime); 
-    bigLEDScreen.setBrightness(prevBrightness); 
-  }
-  else
-  {
-    DEBUG("RTC is invalid");
-  }
+
+  #ifndef USE_SOFT_RTC
+    DEBUG("Begin RTC");
+
+    // Запускаем часики
+    rtc.Begin();
+    DEBUG("Begin i2c ok");
+    DEBUG(rtc.LastError());
+    
+    rtc.LastError();
+    rtc.SetIsRunning(true);
+
+    DEBUG(rtc.GetIsRunning());
+    DEBUG("Start RTC ok");
+
+    DEBUG(rtc.GetDateTime().Hour());
+    DEBUG(rtc.GetDateTime().Minute());
+    DEBUG("End RTC"); 
+
+    // Если время валидно, покажем его
+    if(rtc.IsDateTimeValid())
+    {
+      DEBUG("RTC is valid");
+      makeDateTimeScreen(datetime, rtc.GetDateTime().Hour(), rtc.GetDateTime().Minute(), true);
+      // И сразу показали снова, а то вдруг оно поменялось
+      prevBrightness = bigLEDScreen.getBrightness();
+      bigLEDScreen.setBrightness(0);
+      bigLEDScreen.setText(datetime); 
+      bigLEDScreen.setBrightness(prevBrightness); 
+    }
+    else
+    {
+      DEBUG("RTC is invalid");
+    }
+  #else
+    rtc.setDeltaT(SOFT_RTC_DELTA_T); 
+  #endif 
 
 DEBUG("Begin GPS");
 GPS_SoftSerial.begin(SOFT_GPS_BAUD_RATE);
@@ -150,16 +159,37 @@ delay(3000);
       ATGM332D.encode(GPS_SoftSerial.read());
   }
   
+
   DEBUG(ATGM332D.time.hour());
   DEBUG(ATGM332D.time.minute());
   DEBUG("***");
 
-  if(GPS_IS_VALID() && atoi(ATGM332D_year.value()) >= 2023)
+  #ifndef USE_SOFT_RTC
+    // Если железные часы, то попробуем поставить время и идём дальше.
+    if(GPS_TIME_IS_VALID() && atoi(ATGM332D_year.value()) >= 2023)
+      adjustTime(getGMTOffset());
+  #else
+    // А если часы софтверные, то первую установку надо делать до победного
+    DEBUG("First RTC setting...");
+    while(!(GPS_TIME_IS_VALID() && atoi(ATGM332D_year.value()) >= 2023))
+    {
+      while(GPS_SoftSerial.available() > 0)
+      {
+          ATGM332D.encode(GPS_SoftSerial.read());
+      }
+    }
     adjustTime(getGMTOffset());
+    DEBUG("Done!");
+  #endif
 
   DEBUG(ATGM332D_year.value());
-  DEBUG(rtc.GetDateTime().Hour());
-  DEBUG(rtc.GetDateTime().Minute());
+  #ifndef USE_SOFT_RTC
+    DEBUG(rtc.GetDateTime().Hour());
+    DEBUG(rtc.GetDateTime().Minute());
+  #else
+    DEBUG(rtc.getHours());
+    DEBUG(rtc.getMinutes());
+  #endif
   DEBUG("***");
 
   float lat = 0.0;
@@ -187,7 +217,11 @@ delay(3000);
   }
   else
   {
-    sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+    #ifndef USE_SOFT_RTC
+      sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+    #else
+      sunHelper.compute(lat, lon, rtc.getTimestamp2000(), getGMTOffset() / 60);
+    #endif
     sun.rise = sunHelper.sunrise();
     sun.set = sunHelper.sunset();
   }
@@ -198,7 +232,11 @@ delay(3000);
   // Теперь можно задавать правильную яркость
   bigLEDScreen.setBrightness(calculateBrightness(&sun));
   
-  makeDateTimeScreen(datetime, rtc.GetDateTime().Hour(), rtc.GetDateTime().Minute(), true);
+  #ifndef USE_SOFT_RTC
+    makeDateTimeScreen(datetime, rtc.GetDateTime().Hour(), rtc.GetDateTime().Minute(), true);
+  #else
+    makeDateTimeScreen(datetime, rtc.getHours(), rtc.getMinutes(), true);
+  #endif
   // И сразу показали снова, а то вдруг оно поменялось
   prevBrightness = bigLEDScreen.getBrightness();
   bigLEDScreen.setBrightness(0);
@@ -210,9 +248,15 @@ delay(3000);
   bool minRefreshFlag = true;
   Timer16 clockTimer(500); // Для опроса часов по I2C не чаще раза в полсекунды.
 
-  uint8_t hour = rtc.GetDateTime().Hour();
-  uint8_t minute = rtc.GetDateTime().Minute();
-  uint8_t second = rtc.GetDateTime().Second();
+  #ifndef USE_SOFT_RTC
+    uint8_t hour = rtc.GetDateTime().Hour();
+    uint8_t minute = rtc.GetDateTime().Minute();
+    uint8_t second = rtc.GetDateTime().Second();
+  #else
+    uint8_t hour = rtc.getHours();
+    uint8_t minute = rtc.getMinutes();
+    uint8_t second = rtc.getSeconds();
+  #endif
 
   DEBUG("Start main cycle!");
   for(;;) 
@@ -252,9 +296,15 @@ delay(3000);
     // Сохраняем значения, чтобы не дёргать лишний раз I2C
     if(clockTimer.ready())
     {
-      hour   = rtc.GetDateTime().Hour();
-      minute = rtc.GetDateTime().Minute();
-      second = rtc.GetDateTime().Second();
+      #ifndef USE_SOFT_RTC
+        hour   = rtc.GetDateTime().Hour();
+        minute = rtc.GetDateTime().Minute();
+        second = rtc.GetDateTime().Second();
+      #else
+        hour   = rtc.getHours();
+        minute = rtc.getMinutes();
+        second = rtc.getSeconds();
+      #endif
       //DEBUG(second);
     }
 
@@ -316,7 +366,13 @@ delay(3000);
           }
           else
           {
-            sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+             #ifndef USE_SOFT_RTC
+              sunHelper.compute(lat, lon, rtc.GetDateTime().TotalSeconds(), getGMTOffset() / 60);
+            #else
+              sunHelper.compute(lat, lon, rtc.getTimestamp2000(), getGMTOffset() / 60);
+              DEBUG("TIMESTAMP2000:");
+              DEBUG(rtc.getTimestamp2000());
+            #endif
             sun.rise = sunHelper.sunrise();
             sun.set = sunHelper.sunset();
           }
@@ -330,9 +386,21 @@ delay(3000);
 
 void adjustTime(uint32_t GMTSecondsOffset)
 {
-  rtc.SetDateTime
-  (
-    RtcDateTime
+  #ifndef USE_SOFT_RTC
+    rtc.SetDateTime
+    (
+      RtcDateTime
+      (
+        atoi(ATGM332D_year.value()), 
+        atoi(ATGM332D_month.value()), 
+        atoi(ATGM332D_day.value()), 
+        ATGM332D.time.hour(), 
+        ATGM332D.time.minute(),
+        ATGM332D.time.second() 
+      ) + GMTSecondsOffset
+    );
+  #else
+    RtcDateTime dt
     (
       atoi(ATGM332D_year.value()), 
       atoi(ATGM332D_month.value()), 
@@ -340,14 +408,23 @@ void adjustTime(uint32_t GMTSecondsOffset)
       ATGM332D.time.hour(), 
       ATGM332D.time.minute(),
       ATGM332D.time.second() 
-    ) + GMTSecondsOffset
-  );
+    );
+    dt += GMTSecondsOffset;
+    rtc.stopRTC();
+      rtc.setDate(dt.Day(), dt.Month(), dt.Year());
+      rtc.setTime(dt.Hour(), dt.Minute(), dt.Second());
+    rtc.startRTC();
+  #endif
 }
 
 byte calculateBrightness(sunsetSunrise* sun)
 {
   DEBUG("Enter calculateBrightness()");
-  RtcDateTime timeNow  = rtc.GetDateTime();
+  #ifndef USE_SOFT_RTC
+    RtcDateTime timeNow  = rtc.GetDateTime();
+  #else
+    RtcDateTime timeNow(rtc.getYear(), rtc.getMonth(), rtc.getDay(), rtc.getHours(), rtc.getMinutes(), rtc.getSeconds());
+  #endif
   uint32_t    timeSet  = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + ((uint32_t)sun->set * 60); 
   uint32_t    timeRise = RtcDateTime(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0 ,0).TotalSeconds() + ((uint32_t)sun->rise * 60); 
 
