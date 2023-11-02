@@ -5,32 +5,16 @@ class swRTC2000 : public swRTC
 {
     public:
     using swRTC::swRTC;
-    unsigned long getTimestamp2000(int yearT = 2000);
+    unsigned long getTimestamp2000(void);
 };
 
 // Мы напишем новую функцию, которая вернёт Timestamp с 2000 
 // для совместимости с другими либами.
-unsigned long swRTC2000::getTimestamp2000(int yearT)
+// Взято из swRTC с небольшими изменениями.
+unsigned long swRTC2000::getTimestamp2000(void)
 {
     unsigned long time = 0;
-
-	//check the epoch
-	if (yearT == 0) 
-    {
-		yearT = 2000;
-	} 
-    else if (yearT < 1900) 
-    {
-		yearT = 1900;
-	} 
-    else if (yearT > 2000) 
-    {
-		yearT = 2000;
-	} 
-    else if ((yearT != 1900) && (yearT != 2000)) 
-    {
-		yearT = 2000;
-	}
+    const int yearT = 2000;
 
 	//One revolution of the Earth is not 365 days but accurately 365.2422 days.
 	//It is leap year that adjusts this decimal fraction. But...
@@ -43,9 +27,7 @@ unsigned long swRTC2000::getTimestamp2000(int yearT)
 	time = (time + getHours()) * 60UL; //find minutes from hours
 	time = (time + getMinutes()) * 60UL; //find seconds from minute
 	time += getSeconds(); // add seconds
-	//if (time > 951847199UL) { 
-        time += 86400UL; 
-    //    } //year 2000 is a special leap year, so 1 day must be added if date is greater than 29/02/2000
+    time += 86400UL; //year 2000 is a special leap year, so 1 day must be added if date is greater than 29/02/2000
 	//the code below checks if, in case of a leap year, the date is before or past the 29th of februray:
 	//if no, the leap day hasn't been yet reached so we have to subtract a day
 	if (isLeapYear(getYear())) 
