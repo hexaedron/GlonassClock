@@ -409,6 +409,7 @@ void adjustTime(uint32_t GMTSecondsOffset)
       ATGM332D.time.minute(),
       ATGM332D.time.second() 
     );
+    if(dt.Hour() == 18) return; // Фиксим нововведение с неработающим GPS
     dt += GMTSecondsOffset;
     rtc.stopRTC();
       rtc.setDate(dt.Day(), dt.Month(), dt.Year());
