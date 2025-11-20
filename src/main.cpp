@@ -69,7 +69,7 @@ void initPins(void)
 }
 
 // Берёт с GPS время, плюсует к нему смещение часового пояса и обновляет RTC часики
-void adjustTime(uint32_t GMTSecondsOffset);
+void adjustTime(uint32_t GMTSecondsOffset, bool force = false);
 
 // Возвращает правильную яркость, беря из EEPROM значения дневной и ночной яркости
 byte calculateBrightness(sunsetSunrise* sun);
@@ -79,6 +79,8 @@ void EEPROMValuesInit(bool force = false);
 uint32_t getGMTOffset(void);
 void setupModeGMTOffset(void);
 void initATGM332D(bool force = false);
+
+bool gpsTimeOKFlag = true; // Глобальный флаг для отслеживания состояния часов
 
 int main(int argc, char **argv) 
 {
@@ -178,7 +180,7 @@ delay(3000);
           ATGM332D.encode(GPS_SoftSerial.read());
       }
     }
-    adjustTime(getGMTOffset());
+    adjustTime(getGMTOffset(), true);
     DEBUG("Done!");
   #endif
 
@@ -310,10 +312,11 @@ delay(3000);
 
     // Рисуем время только тогда, когда сменится минута (т.е. будет ровно 0 секунд)
     // Флаг тут для того, чтобы не делать это несколько раз за секунду!
-    // Тут доп условие. Мигаем точкой только если за последние 10 сек было обновление по GPS
+    // Тут доп условие. Мигаем точкой только если часы идут в пределах
+    // получаса от модуля. Иначе точки горят постоянно.
     if(((second % 2) && dotRefreshFlag))  
     {
-      if(GPS_TIME_IS_VALID())
+      if(gpsTimeOKFlag)
       {
         makeDateTimeScreen(datetime, hour, minute, false);
         prevBrightness = bigLEDScreen.getBrightness();
@@ -384,7 +387,7 @@ delay(3000);
   }
 }
 
-void adjustTime(uint32_t GMTSecondsOffset)
+void adjustTime(uint32_t GMTSecondsOffset, bool force)
 {
   #ifndef USE_SOFT_RTC
     rtc.SetDateTime
@@ -409,8 +412,31 @@ void adjustTime(uint32_t GMTSecondsOffset)
       ATGM332D.time.minute(),
       ATGM332D.time.second() 
     );
-    if(dt.Hour() == 18) return; // Фиксим нововведение с неработающим GPS
     dt += GMTSecondsOffset;
+
+    RtcDateTime dtOld 
+    (
+      rtc.getYear(), 
+      rtc.getMonth(), 
+      rtc.getDay(), 
+      rtc.getHours(), 
+      rtc.getMinutes(),
+      rtc.getSeconds() 
+    );
+
+    if( (abs((int64_t)dt.TotalSeconds() - (int64_t)dtOld.TotalSeconds()) >  30 * 60) && !force )
+    {
+        // Если показания внутренних часов и модуля различаются
+        // более чем на 30 минут, и это не первая установка часов,
+        // то что-то идёт не так!
+        gpsTimeOKFlag = false;
+        return; 
+    }
+    else
+    {
+        gpsTimeOKFlag = true;
+    }
+
     rtc.stopRTC();
       rtc.setDate(dt.Day(), dt.Month(), dt.Year());
       rtc.setTime(dt.Hour(), dt.Minute(), dt.Second());
