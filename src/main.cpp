@@ -290,6 +290,28 @@ delay(3000);
       bigLEDScreen.setBrightness(prevBrightness);
       encoder.resetState();
     }
+
+    // Ручной режим установки
+    if(encoder.turn())
+    {
+      RtcDateTime dt 
+      (
+        rtc.getYear(), 
+        rtc.getMonth(), 
+        rtc.getDay(), 
+        rtc.getHours(), 
+        rtc.getMinutes(),
+        rtc.getSeconds() 
+      );
+
+      dt += (encoder.dir() * 60);
+
+      rtc.stopRTC();
+        rtc.setDate(dt.Day(), dt.Month(), dt.Year());
+        rtc.setTime(dt.Hour(), dt.Minute(), dt.Second());
+      rtc.startRTC();
+      encoder.resetState();
+    }
     
     // Время с датчика надо брать постоянно, чтобы не переполнился буфер
     while(GPS_SoftSerial.available() > 0)
