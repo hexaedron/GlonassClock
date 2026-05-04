@@ -436,6 +436,10 @@ void adjustTime(uint32_t GMTSecondsOffset, bool force)
     );
     dt += GMTSecondsOffset;
 
+    // Если время приходит 18:00 - 18:06, то весьма вероятно, что оно неверное
+    if( (dt.Hour() == 18) && (dt.Minute() <= 6))
+      return;
+
     RtcDateTime dtOld 
     (
       rtc.getYear(), 
