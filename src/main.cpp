@@ -173,14 +173,33 @@ delay(3000);
   #else
     // А если часы софтверные, то первую установку надо делать до победного
     DEBUG("First RTC setting...");
-    while(!(GPS_TIME_IS_VALID() && atoi(ATGM332D_year.value()) >= 2023))
+    
+    bool manualFlag = false;
+    while(!(GPS_TIME_IS_VALID() && atoi(ATGM332D_year.value()) >= 2026))
     {
       while(GPS_SoftSerial.available() > 0)
       {
           ATGM332D.encode(GPS_SoftSerial.read());
       }
+      encoder.tick();
+      if(encoder.turn() || encoder.click())
+      {
+        encoder.resetState();
+        manualFlag = true;
+        break;
+      }
     }
-    adjustTime(getGMTOffset(), true);
+    if(manualFlag)
+    {
+      rtc.stopRTC();
+        rtc.setDate(20, 4, 2026);
+        rtc.setTime(12, 0, 0);
+      rtc.startRTC();
+    }
+    else
+    {
+      adjustTime(getGMTOffset(), true);
+    }
     DEBUG("Done!");
   #endif
 
@@ -450,10 +469,10 @@ void adjustTime(uint32_t GMTSecondsOffset, bool force)
       rtc.getSeconds() 
     );
 
-    if( (abs((int64_t)dt.TotalSeconds() - (int64_t)dtOld.TotalSeconds()) > 90) && !force )
+    if( (abs((int64_t)dt.TotalSeconds() - (int64_t)dtOld.TotalSeconds()) > 60 * 10) && !force )
     {
         // Если показания внутренних часов и модуля различаются
-        // более чем на 90 секунд, и это не первая установка часов,
+        // более чем на 10 минут, и это не первая установка часов,
         // то что-то идёт не так!
         gpsTimeOKFlag = false;
         return; 
