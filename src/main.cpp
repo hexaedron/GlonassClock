@@ -472,10 +472,10 @@ void adjustTime(uint32_t GMTSecondsOffset, bool force)
       rtc.getSeconds() 
     );
 
-    if( (abs((int64_t)dt.TotalSeconds() - (int64_t)dtOld.TotalSeconds()) > (60 * 5)) && !force )
+    if( (abs((int64_t)dt.TotalSeconds() - (int64_t)dtOld.TotalSeconds()) > (60 * 2)) && !force )
     {
         // Если показания внутренних часов и модуля различаются
-        // более чем на 5 минут, и это не первая установка часов,
+        // более чем на 2 минуты, и это не первая установка часов,
         // то что-то идёт не так!
         gpsTimeOKFlag = false;
         return; 
